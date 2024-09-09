@@ -1,66 +1,52 @@
-# syntax = docker/dockerfile:1
+# FROM ruby:3.2-bullseye as base
 
-# This Dockerfile is designed for production, not development. Use with Kamal or build'n'run by hand:
-# docker build -t my-app .
-# docker run -d -p 80:80 -p 443:443 --name my-app -e RAILS_MASTER_KEY=<value from config/master.key> my-app
+# RUN apt-get update -qq && apt-get install -y build-essential apt-utils libpq-dev nodejs
 
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version
-ARG RUBY_VERSION=3.2.1
-FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
+# WORKDIR /docker/app
 
-# Rails app lives here
-WORKDIR /rails
+# RUN gem install bundler
 
-# Install base packages
+# COPY Gemfile* ./
+
+# RUN bundle install
+
+# ADD . /docker/app
+
+# ARG DEFAULT_PORT 3000
+
+# EXPOSE ${DEFAULT_PORT}
+
+# CMD [ "bundle","exec", "puma", "config.ru"] 
+# # CMD ["rails","server"]
+
+# Stage 1: Build dependencies
+FROM ruby:3.2-bullseye AS builder
+
+WORKDIR /tmp/app
+
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips sqlite3 && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+    apt-get install -y build-essential apt-utils libpq-dev nodejs
 
-# Set production environment
-ENV RAILS_ENV="production" \
-    BUNDLE_DEPLOYMENT="1" \
-    BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development"
+COPY Gemfile* ./
 
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build gems
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git pkg-config && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+RUN gem install bundler --no-document
 
 # Install application gems
-COPY Gemfile Gemfile.lock ./
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    bundle exec bootsnap precompile --gemfile
+RUN bundle install --no-cache --no-document
 
-# Copy application code
-COPY . .
+# Copy only the application code and Gemfile.lock
+COPY --from=builder /tmp/app/Gemfile.lock /docker/app/Gemfile.lock
+COPY . /docker/app
 
-# Precompile bootsnap code for faster boot times
-RUN bundle exec bootsnap precompile app/ lib/
+# Stage 2: Slim runtime image
+FROM ruby:3.2-alpine AS runner
 
+WORKDIR /docker/app
 
+COPY --from=builder /docker/app .
 
+ARG DEFAULT_PORT 3000
 
-# Final stage for app image
-FROM base
+EXPOSE ${DEFAULT_PORT}
 
-# Copy built artifacts: gems, application
-COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
-COPY --from=build /rails /rails
-
-# Run and own only the runtime files as a non-root user for security
-RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
-USER 1000:1000
-
-# Entrypoint prepares the database.
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-CMD ["./bin/rails", "server"]
+CMD [ "bundle", "exec", "puma", "config.ru"]
