@@ -14,17 +14,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
         
-      - name: Build and push Backend Ruby
-        uses: docker/build-push-action@v6
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        with:
-          client: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-ruby:${{ env.IMAGE_TAG }}
+      # - name: Build and push Backend Ruby
+      #  uses: docker/build-push-action@v6
+      #  env:
+     #     IMAGE_TAG: ${{ github.sha }}
+ #       with:
+       #   client: .
+      #    push: true
+       #   tags: ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-ruby:${{ env.IMAGE_TAG }}
 
       - name: Build and push Frontend React
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v4
         env:
           IMAGE_TAG: ${{ github.sha }}
         with:
