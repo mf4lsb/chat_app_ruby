@@ -28,7 +28,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         with:
-          context: client/
+          file: client/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-react:${{ env.IMAGE_TAG }}
 
