@@ -32,21 +32,25 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-react:${{ env.IMAGE_TAG }}
 
-  # deployment:
-  #   runs-on: ubuntu-latest
-  #   needs: build-docker
-  #   steps:
-  #     - name: Deployment to idcloudhost server
-  #       uses: appleboy/ssh-action@master
-  #       with:
-  #         host: ${{ secrets.HOST }}
-  #         username: ${{ secrets.USERNAME }}
-  #         key: ${{ secrets.SERVER_PRIVATE_KEY }}
-  #         port: 22
-  #         script: |
-  #           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-resume:nextjs_${{ github.sha }}
-  #           docker stop my-resume
-  #           docker rm my-resume
-  #           docker run -d --name my-resume -p 9876:3000 ${{ secrets.DOCKERHUB_USERNAME }}/my-resume:nextjs_${{ github.sha }}
-  #           docker image prune -a -f
-  #           echo "Deployment successfully ✅"
+  deployment:
+    runs-on: ubuntu-latest
+    needs: build-docker
+    steps:
+      - name: Deployment to idcloudhost server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SERVER_PRIVATE_KEY }}
+          port: 22
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-ruby:${{ github.sha }}
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-react:${{ github.sha }}
+            docker stop chat-app-ruby-bagir
+            docker stop chat-app-react-bagir
+            docker rm chat-app-ruby-bagir
+            docker rm chat-app-react-bagir
+            docker run -d --name chat-app-ruby-bagir -p 6789:3000 ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-ruby:${{ github.sha }}
+            docker run -d --name chat-app-react-bagir -p 6790:80 ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-react:${{ github.sha }}
+            docker image prune -a -f
+            echo "Deployment successfully ✅"
