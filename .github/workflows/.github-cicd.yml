@@ -50,7 +50,7 @@ jobs:
             docker stop chat-app-react-bagir
             docker rm chat-app-ruby-bagir
             docker rm chat-app-react-bagir
-            docker run -d --name chat-app-ruby-bagir -p 6789:3000 ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-ruby:${{ github.sha }}
+            docker run -d --name chat-app-ruby-bagir -p 3000:3000 ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-ruby:${{ github.sha }}
             docker run -d --name chat-app-react-bagir -p 6790:80 ${{ secrets.DOCKERHUB_USERNAME }}/chat-app-react:${{ github.sha }}
             docker image prune -a -f
             echo "Deployment successfully ✅"
